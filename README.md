@@ -187,7 +187,10 @@ new Transaction()
 ##### Entity queries:
 
 * Notes:
-  * Entity `kind` must be supplied to constructor.
+  * Required `kind` must be supplied to constructor, while `endCursor` is optional.
+    * `new Query()` is invalid
+    * `new Query('Persons')` is valid
+    * `new Query('Persons', 'endcursorxyz')` is valid.
   * `.order()` method is replaced with `.ascend()` and `.descend()` for readability.
   * As per Google Datastore docs on Queries, when you use an inequality filter to a column, you must sort that same column BEFORE you sort other columns.
     * In which case calling `.ascend('age')` or `.descend('age')` after calling `.filter('age', '>', 20)` is the right thing to do.
