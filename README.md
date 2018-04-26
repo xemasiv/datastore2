@@ -2,14 +2,13 @@
 
 ---
 
-### Simplified features
+### Features
 
 * Creation of keys
+* Entity creation with UUIDv4 as keyname
+* Atomic entity updates & merges
 * Atomic transactions, for multiple entities
-* Atomic entity upserts
-* Atomic entity reads
 * Entity fetching from filters
-* Key-mapping of query results
 
 ---
 
@@ -17,23 +16,29 @@
 
 ##### Setup:
 
-* NPM: `npm install datastore2 --save`
-* YARN: `yarn add datastore2`
-
+* With NPM:
+```
+npm install datastore2 --save
+```
+* With YARN:
+```
+yarn add datastore2
+```
+* Script:
 ```
 // Set datastore constructor opts
 const opts = {
   projectId: 'projectNameGoesHere'
 };
-
 // Destructure
 const Datastore2 = require('datastore2');
-const { Key, Transaction, Entity } = Datastore2(opts);
+const { Key, Transaction, Entity, Query } = Datastore2(opts);
 ```
 
 ##### Entity from UUIDv4 key name:
 
-* `setKind()` must be called first.
+* Notes:
+  * `setKind()` must be called first.
 
 ```
 let Alice = new Entity();
@@ -65,7 +70,8 @@ Key {
 
 ##### Entity data update:
 
-* Overwrites existing entity data.
+* Notes:
+  * Overwrites existing entity data.
 
 ```
 let Alice = new Entity();
@@ -79,8 +85,9 @@ Alice.setKind('Persons').fromUUID()
 
 ##### Entity data merge:
 
-* Merges new data with existing entity data
-* Uses `Object.assign`
+* Notes:
+  * Merges new data with existing entity data
+  * Uses `Object.assign`
 
 ```
 let Alice = new Entity();
@@ -109,6 +116,11 @@ let aliceKey = Key('Persons', 'alice-key-name');
 
 ##### Entity from key:
 
+* Notes:
+  * No need to call `setKind()` first since entity kind is already supplied in your Key.
+  * This flow is ideal for direct updates and merges.
+  * If you intend to read the data first before performing mutations, using the `Transaction` class is highly recommended.
+
 ```
 let aliceKey = Key('Persons', 'alice-key-name');
 let Alice = new Entity();
@@ -117,6 +129,9 @@ Alice.setKey(aliceKey)
 ```
 
 ##### Entity from filters:
+
+* Notes:
+  * `setKind()` must be called first.
 
 ```
 let Alice = new Entity();
@@ -132,15 +147,29 @@ Alice
   .catch((e) => console.log('error:', e));
 ```
 
-##### Basic Transaction:
+```
+Key {
+  namespace: undefined,
+  name: '41719603-268f-439b-a6a8-fcc15e34b380',
+  kind: 'Persons',
+  path: [Getter] }
+```
+
+##### Basic transaction:
+
+* Flow Notes:
+  * `new Transaction()` creates a Transaction.
+  * Then you supply your mapped keys to `.keys()`
+  * You call `.init()` to supply your executor function.
+  * Your executor function must accept two arguments:
+    * entities - the entities involved in transaction, modify them DIRECTLY as you wish.
+    * commit - a callback function to save the changes and commit the transaction. Returns a promise so it can be chained.
+* Example Notes:
+  * `Alice.balance` is 50
+  * `Bob.balance` is 0
+  * Alice sends `transactionAmount` (50) to Bob.
 
 ```
-// Scenario:
-//   Alice sends 50 to bob.
-// Where:
-//   alice.balance = 50;
-//   bob.balance = 0;
-
 const aliceKey = Key('Persons', 'alice-key-name')
 const bobKey = Key('Persons', 'bob-key-name')
 
@@ -151,12 +180,42 @@ new Transaction()
   .init((entities, commit) => {
     entities.alice.balance -= transactionAmount;
     entities.bob.balance += transactionAmount;
-    commit(entities);
+    return commit(entities);
   });
 ```
 
-Atomic entity read:
+##### Entity queries:
 
-Entity queries:
+* Notes:
+  * Entity `kind` must be supplied to constructor.
+  * `.order()` method is replaced with `.ascend()` and `.descend()` for readability.
+  * As per Google Datastore docs on Queries, when you use an inequality filter to a column, you must sort that same column BEFORE you sort other columns.
+    * In which case calling `.ascend('age')` or `.descend('age')` after calling `.filter('age', '>', 20)` is the right thing to do.
+* Supported methods:
+  * .ascend(col)
+    * `col` is the column you want to ascend.
+  * .descend(col)
+  * `col` is the column you want to descend.
+  * .select(fields)
+    * `fields` - array of strings
+  * .filter(col, operator, val)
+    * `col` is column, for example: 'first_name'
+    * `operator`, for example: '='
+    * `val` is value, for example: 'Alice'
+  * .limit(limit)
+    * `limit` is integer, for example: 1
+  * .runQuery()
+    * Runs the query.
+    * Returns object with `entities`, `keys`, `endCursor`.
+* Datastore Queries docs:
+  * https://cloud.google.com/datastore/docs/concepts/queries
 
-Key-mapped entity queries:
+```
+  new Query('Persons')
+    .filter('first_name', '=', 'Alice')
+    .limit(1)
+    .runQuery()
+    .then(({ entities, keys, endCursor }) => {
+
+      });
+```
