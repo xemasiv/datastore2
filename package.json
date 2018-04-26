@@ -1,0 +1,34 @@
+{
+  "dependencies": {
+    "@google-cloud/datastore": "^1.4.0",
+    "uuid-random": "^1.0.6"
+  },
+  "name": "datastore2",
+  "description": "---",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xemasiv/datastore2.git"
+  },
+  "keywords": [
+    "google",
+    "cloud",
+    "datastore",
+    "atomic",
+    "transactions",
+    "queries",
+    "xemasiv",
+    "fyeah"
+  ],
+  "author": "xemasiv <xemasiv@gmail.com>",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/xemasiv/datastore2/issues"
+  },
+  "homepage": "https://github.com/xemasiv/datastore2#readme"
+}
