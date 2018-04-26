@@ -1,5 +1,11 @@
 ## Datastore2
 
+### Backstory
+
+* Google Cloud's Datastore library is cool.
+* Yet some parts were repetitive.
+* Wrote this, life has never been the same.
+
 ---
 
 ### Features
@@ -9,6 +15,14 @@
 * Atomic entity updates & merges
 * Atomic transactions, for multiple entities
 * Entity fetching from filters
+* Entity queries with endCursor support
+
+### Missing Features
+
+* Namespace support
+* Ancestors support
+
+It's because I don't use them for now, will definitely add them soon. Open to PR's!
 
 ---
 
@@ -195,23 +209,21 @@ new Transaction()
   * As per Google Datastore docs on Queries, when you use an inequality filter to a column, you must sort that same column BEFORE you sort other columns.
     * In which case calling `.ascend('age')` or `.descend('age')` after calling `.filter('age', '>', 20)` is the right thing to do.
 * Supported methods:
-  * .ascend(col)
+  * `.ascend(col)`
     * `col` is the column you want to ascend.
-  * .descend(col)
+  * `.descend(col)`
   * `col` is the column you want to descend.
-  * .select(fields)
+  * `.select(fields)`
     * `fields` - array of strings
-  * .filter(col, operator, val)
+  * `.filter(col, operator, val)`
     * `col` is column, for example: 'first_name'
     * `operator`, for example: '='
     * `val` is value, for example: 'Alice'
-  * .limit(limit)
+  * `.limit(limit)`
     * `limit` is integer, for example: 1
-  * .runQuery()
+  * `.runQuery()`
     * Runs the query.
     * Returns object with `entities`, `keys`, `endCursor`.
-* Datastore Queries docs:
-  * https://cloud.google.com/datastore/docs/concepts/queries
 
 ```
   new Query('Persons')
@@ -222,3 +234,9 @@ new Transaction()
 
       });
 ```
+
+---
+
+### LICENSE
+
+![C](https://upload.wikimedia.org/wikipedia/commons/8/84/Public_Domain_Mark_button.svg) ![0](https://upload.wikimedia.org/wikipedia/commons/6/69/CC0_button.svg)
