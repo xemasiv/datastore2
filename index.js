@@ -10,6 +10,7 @@ const Datastore2 = (opts) => {
     keyName = String(keyName);
     return Datastore.key([kind, keyName]);
   };
+
   class Transaction{
     constructor () {
       this.transaction = Datastore.transaction();
@@ -100,6 +101,7 @@ const Datastore2 = (opts) => {
         });
     }
   };
+
   class Entity{
     setKind (kind) {
       if (Boolean(kind) === false) {
@@ -203,11 +205,48 @@ const Datastore2 = (opts) => {
       });
     }
   }
+
+  class Snapshot{
+    constructor (timeoutFn, timeout) {
+      this.timeoutFn = (
+        Boolean(timeoutFn) === true &&
+        typeof timeoutFn === 'function'
+      ) ? timeoutFn : null;
+      this.timeout = (
+        Boolean(timeout) === true &&
+        typeof timeout === 'number'
+      ) ? timeout : 30000;
+    }
+    capture (keys) {
+      let instance = this;
+      let timeoutFn = this.timeoutFn;
+      let timeout = this.timeout;
+      let T = new Transaction();
+      return T.keys(keys)
+        .init(({entities, commit}) => {
+          let timer = setTimeout(() => {
+            if (typeof timeoutFn === 'function') {
+              timeoutFn();
+            }
+            commit(entities);
+          }, timeout);
+          instance.entities = entities;
+          instance.release = () => {
+            instance.entities = undefined;
+            clearTimeout(timer)
+            return commit(entities);
+          }
+          return Promise.resolve(entities);
+        });
+    }
+  }
+
   return {
     Transaction,
     Key,
     Entity,
-    Query
+    Query,
+    Snapshot
   };
 };
 module.exports = Datastore2;

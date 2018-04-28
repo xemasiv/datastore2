@@ -6,9 +6,11 @@ const opts = {
 
 import test from 'ava';
 
-const { Key, Entity, Query, Transaction } = require('./index')(opts);
+const { Key, Entity, Query, Snapshot, Transaction } = require('./index')(opts);
 
 const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+
 
 let entity1 = new Entity();
 let entity2 = new Entity();
@@ -154,4 +156,68 @@ test('8', t => {
       console.log('Transaction rejected.');
       t.pass(e);
     });
+});
+test('9', t => {
+  console.log(' ');
+  console.log('#9: Snapshot capture test, with handled release');
+  let snapshot = new Snapshot();
+  return snapshot.capture({
+      alice: entity1.key,
+      bob: entity2.key
+    })
+    .then((entities) => {
+      console.log(entities.alice);
+      return snapshot.release();
+    })
+    .then(() => {
+      t.pass();
+    });
+});
+test('10', t => {
+  console.log(' ');
+  console.log('#10: Snapshot capture test, explicit release');
+  console.log('(should release snapshot and PASS in 3 seconds)');
+  console.log('(will fail if 5 seconds passed)');
+  return new Promise((resolve, reject) => {
+    let snapshot = new Snapshot(() => {
+        console.log('Snapshot timeout!!');
+        t.pass();
+        resolve();
+      }, 3000)
+      .capture({
+        alice: entity1.key,
+        bob: entity2.key
+      })
+      .then((entities) => {
+        console.log('entities:', entities);
+      });
+    setTimeout(() => {
+      t.fail();
+      resolve();
+    }, 5000);
+  });
+});
+test('11', t => {
+  console.log(' ');
+  console.log('#11: Snapshot capture test, unhandled release');
+  console.log('(should release snapshot and PASS in 30 seconds)');
+  console.log('(will fail if 35 seconds passed)');
+  return new Promise((resolve, reject) => {
+    let snapshot = new Snapshot(() => {
+        console.log('Snapshot timeout!!');
+        t.pass();
+        resolve();
+      })
+      .capture({
+        alice: entity1.key,
+        bob: entity2.key
+      })
+      .then((entities) => {
+        console.log('entities:', entities);
+      });
+    setTimeout(() => {
+      t.fail();
+      resolve();
+    }, 35000);
+  });
 });
