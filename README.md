@@ -1,28 +1,17 @@
 ## Datastore2
 
-### Backstory
-
-* Google Cloud's Datastore library is cool.
-* Yet some parts were repetitive.
-* Wrote this, life has never been the same.
-
----
-
-### Features
-
-* Creation of keys
-* Entity creation with UUIDv4 as keyname
-* Atomic entity updates & merges
-* Atomic transactions, for multiple entities
-* Entity fetching from filters
-* Entity queries with endCursor support
-
-### Missing Features
-
-* Namespace support
-* Ancestors support
-
-It's because I don't use them for now, will definitely add them soon. Open to PR's!
+* Atomic data update and merge for entities.
+* Atomic data snapshot capture and release for entities.
+  * Effortless data isolation and consistency.
+* Simplified atomic transactions with commit() and rollback() support.
+  * Returns Promise.resolve() on save & commit success.
+  * Returns Promise.reject() on rollback, with argument support.
+* Simplified entity search from supplied filters.
+  * Saves you the hassle of manually crafting queries.
+* Atomic entity creation from UUIDv4 key name.
+  * Ensures users don't unknowingly write on the same key name.
+* Simplified queries with endCursor and query hash provided for caching.
+  * Easier search, and unique hash for each query instance for easier caching.
 
 ---
 
@@ -178,7 +167,7 @@ Key {
   * Your executor function must destructure three arguments:
     * entities - the entities involved in transaction, modify them DIRECTLY as you wish.
     * commit - a callback function to save the changes and commit the transaction.
-    * rollback - a callback function to rollback your current transaction. 
+    * rollback - a callback function to rollback your current transaction.
 * Example Notes:
   * `Alice.balance` is 50
   * `Bob.balance` is 0
