@@ -172,7 +172,7 @@ test('913123123', t => {
   console.log('#9: Testing multi-key multiple transactions.');
   let p = [];
   let timeStart = Date.now();
-  for (var i=1; i <= 5; i++){
+  for (var i=1; i <= 20; i++){
     p.push(selfTransaction(entity1.key, 1000));
     p.push(selfTransaction(entity2.key, 1000));
     p.push(simpleTransaction(entity1.key, entity2.key, 1));

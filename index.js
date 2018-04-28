@@ -37,25 +37,21 @@ const Datastore2 = (opts) => {
           { algorithm: 'sha256' }
         );
       });
-      const tryCommit = () => {
+      const tryCommit = (backOff) => {
         let executorFnReject = false;
-        // console.log(TransactionLocks);
         return Promise.resolve()
           .then(() => {
             let lockedHashFound = false;
             for (var i = 0; i < hashesOfKeyPairs.length; i++) {
               if (TransactionLocks.includes(hashesOfKeyPairs[i]) === true) {
                 lockedHashFound = true;
-                // console.log('stopped @', i + 1, 'of', hashesOfKeyPairs.length);
                 break;
               }
             }
             if (lockedHashFound === true) {
-              // console.log('lockedHashFound');
               return Promise.reject();
             } else {
               hashesOfKeyPairs.map((hash) => {
-                // console.log('locking', hash);
                 TransactionLocks.push(hash);
               });
               return Promise.resolve();
@@ -71,6 +67,9 @@ const Datastore2 = (opts) => {
             return executorFn(entities)
               .catch((...args) => {
                 executorFnReject = true;
+                hashesOfKeyPairs.map((hash) => {
+                  TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
+                });
                 return Promise.reject.apply(Promise, args);
               });
           })
@@ -83,39 +82,26 @@ const Datastore2 = (opts) => {
             });
             transaction.save(updateArray);
             return transaction
-                .commit()
-                .catch(() => {
-                  hashesOfKeyPairs.map((hash) => {
-                    // console.log('unlocking', hash);
-                    TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
-                  });
-                  return Promise.reject();
+              .commit()
+              .catch(() => {
+                hashesOfKeyPairs.map((hash) => {
+                  TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
                 });
+                return Promise.reject();
+              });
           })
           .then(() => {
-            // console.log('attempt success:', attempt);
             hashesOfKeyPairs.map((hash) => {
-              // console.log('unlocking', hash);
               TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
             });
             return Promise.resolve();
           })
           .catch((...args) => {
-            // console.log('attempt fail:', attempt);
-            if (executorFnReject === true) {
-              hashesOfKeyPairs.map((hash) => {
-                // console.log('unlocking', hash);
-                TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
-              });
-            }
-            if (
-              // attempt <= maxAttempts &&
-              executorFnReject === false
-            ) {
-              // attempt = attempt + 1;
+            if (executorFnReject === false) {
+              console.log('backOff:', backOff);
               return Promise.resolve()
-                .then(delay(Rand(500, 1000)))
-                .then(() => tryCommit());
+                .then(delay(backOff))
+                .then(() => tryCommit(backOff < 1024 ? backOff * 2 : 64));
             } else {
               return Promise.resolve()
                 .then(() => transaction.rollback())
@@ -123,7 +109,7 @@ const Datastore2 = (opts) => {
             }
           });
       }
-      return tryCommit();
+      return tryCommit(64);
     }
   }
 

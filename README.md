@@ -1,15 +1,19 @@
 ## Datastore2
 
-* Atomic data update and merge for entities.
-* Atomic data snapshot capture and release for entities.
-  * Effortless data isolation and consistency.
-* Simplified atomic transactions with commit() and rollback() support.
-  * Returns Promise.resolve() on save & commit success.
-  * Returns Promise.reject() on rollback, with argument support.
+* Atomic transactions
+  * Either all entities get commits, or none at all.
+* Requires use of pure functions to modify entities
+  * Take in fetched entities, return modified entities
+  * Return `Promise.resolve(entities)` to proceed transaction.
+  * Return `Promise.reject(...whatever)` to cancel transaction, and pass whatever to your `catch`.
+* Entity locking
+  * Transaction will be delayed if one of its entities are involved in other transactions
+  * Uses exponential back-off for retries (64ms to 1024ms, then back to 64ms)
+  * Ensures isolation and consistency of involed entities in transactions.
 * Simplified entity search from supplied filters.
   * Saves you the hassle of manually crafting queries.
-* Atomic entity creation from UUIDv4 key name.
-  * Ensures users don't unknowingly write on the same key name.
+* Simplified entity creation from UUIDv4 key name.
+  * Also uses transactions, so users don't unknowingly write on the same key name.
 * Simplified queries with endCursor and query hash provided for caching.
   * Easier search, and unique hash for each query instance for easier caching.
 
