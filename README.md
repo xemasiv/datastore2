@@ -175,9 +175,10 @@ Key {
   * `new Transaction()` creates a Transaction.
   * Then you supply your mapped keys to `.keys()`
   * You call `.init()` to supply your executor function.
-  * Your executor function must accept two arguments:
+  * Your executor function must destructure three arguments:
     * entities - the entities involved in transaction, modify them DIRECTLY as you wish.
-    * commit - a callback function to save the changes and commit the transaction. Returns a promise so it can be chained.
+    * commit - a callback function to save the changes and commit the transaction.
+    * rollback - a callback function to rollback your current transaction. 
 * Example Notes:
   * `Alice.balance` is 50
   * `Bob.balance` is 0
@@ -191,7 +192,7 @@ const transactionAmount = 50;
 
 new Transaction()
   .keys({ alice: aliceKey, bob: bobKey })
-  .init((entities, commit) => {
+  .init(({entities, commit, rollback}) => {
     entities.alice.balance -= transactionAmount;
     entities.bob.balance += transactionAmount;
     return commit(entities);
