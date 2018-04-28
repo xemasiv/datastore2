@@ -1,6 +1,7 @@
 const GoogleCloudDatastore = require('@google-cloud/datastore');
 const uuid = require('uuid-random');
-const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const hasha = require('hasha');
+const circular = require('circular-json');
 
 const Datastore2 = (opts) => {
   const Datastore = new GoogleCloudDatastore(opts);
@@ -19,6 +20,10 @@ const Datastore2 = (opts) => {
     }
     init (executorFn) {
       const { transaction, keyPairs } = this;
+      const rollback = (...args) => {
+        return transaction.rollback()
+          .then(() => Promise.reject.apply(null, args));
+      };
       const commit = (entities) => {
         const updateArray =  keyPairs.map((keyPair) => {
           return {
@@ -27,7 +32,7 @@ const Datastore2 = (opts) => {
           };
         });
         transaction.save(updateArray);
-        return transaction.commit().catch(() => transaction.rollback());
+        return transaction.commit().catch(rollback);
       };
       return transaction
         .run()
@@ -37,7 +42,7 @@ const Datastore2 = (opts) => {
           keyPairs.map((keyPair, keyPairIndex) => {
             entities[keyPair[0]] = results[keyPairIndex][0];
           });
-          return executorFn(entities, commit);
+          return executorFn({entities, commit, rollback});
         });
     }
   }
@@ -85,8 +90,12 @@ const Datastore2 = (opts) => {
             info.endCursor :
             null
           );
+          let hash = hasha(
+            circular.stringify(query),
+            { algorithm: 'sha256' }
+          );
           return Promise.resolve({
-            entities, keys, endCursor
+            entities, keys, endCursor, hash
           });
         });
     }
@@ -123,7 +132,7 @@ const Datastore2 = (opts) => {
           .keys({
             temp: key
           })
-          .init((entities, commit) => {
+          .init(({entities, commit}) => {
             if (Boolean(entities.temp) === true) {
               return recurse();
             } else {
@@ -166,7 +175,7 @@ const Datastore2 = (opts) => {
         .keys({
           temp: key
         })
-        .init((entities, commit) => {
+        .init(({entities, commit}) => {
           entities.temp = updateData;
           return commit(entities);
         });
@@ -180,7 +189,7 @@ const Datastore2 = (opts) => {
         .keys({
           temp: key
         })
-        .init((entities, commit) => {
+        .init(({entities, commit}) => {
           entities.temp = Object.assign(entities.temp, mergeData);
           return commit(entities);
         });
