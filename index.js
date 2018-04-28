@@ -98,10 +98,9 @@ const Datastore2 = (opts) => {
           })
           .catch((...args) => {
             if (executorFnReject === false) {
-              console.log('backOff:', backOff);
               return Promise.resolve()
                 .then(delay(backOff))
-                .then(() => tryCommit(backOff < 1024 ? backOff * 2 : 64));
+                .then(() => tryCommit(backOff < 256 ? backOff * 2 : 32));
             } else {
               return Promise.resolve()
                 .then(() => transaction.rollback())
@@ -109,7 +108,7 @@ const Datastore2 = (opts) => {
             }
           });
       }
-      return tryCommit(64);
+      return tryCommit(32);
     }
   }
 

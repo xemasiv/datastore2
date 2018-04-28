@@ -8,7 +8,7 @@
   * Return `Promise.reject(...whatever)` to cancel transaction, and pass whatever to your `catch`.
 * Entity locking
   * Transaction will be delayed if one of its entities are involved in other transactions
-  * Uses exponential back-off for retries (64ms to 1024ms, then back to 64ms)
+  * Uses exponential back-off for retries (32ms to 256ms, then back to 32ms)
   * Ensures isolation and consistency of involed entities in transactions.
 * Simplified entity search from supplied filters.
   * Saves you the hassle of manually crafting queries.

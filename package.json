@@ -8,7 +8,7 @@
   },
   "name": "datastore2",
   "description": "---",
-  "version": "2.0.4-alpha",
+  "version": "2.0.5-alpha",
   "main": "index.js",
   "devDependencies": {
     "ava": "1.0.0-beta.4"
