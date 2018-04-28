@@ -33,25 +33,29 @@ const Datastore2 = (opts) => {
       }
       const hashesOfKeyPairs = keyPairs.map((keyPair) => {
         return hasha(
-          ''.concat(keyPair[1].kind, keyPair[1].name)
+          ''.concat(keyPair[1].kind, keyPair[1].name),
+          { algorithm: 'sha256' }
         );
       });
       const tryCommit = () => {
+        let executorFnReject = false;
+        // console.log(TransactionLocks);
         return Promise.resolve()
           .then(() => {
             let lockedHashFound = false;
             for (var i = 0; i < hashesOfKeyPairs.length; i++) {
               if (TransactionLocks.includes(hashesOfKeyPairs[i]) === true) {
                 lockedHashFound = true;
-                console.log('stopped @', i + 1, 'of', hashesOfKeyPairs.length);
+                // console.log('stopped @', i + 1, 'of', hashesOfKeyPairs.length);
                 break;
               }
             }
             if (lockedHashFound === true) {
+              // console.log('lockedHashFound');
               return Promise.reject();
             } else {
               hashesOfKeyPairs.map((hash) => {
-                console.log('locking', hash);
+                // console.log('locking', hash);
                 TransactionLocks.push(hash);
               });
               return Promise.resolve();
@@ -64,7 +68,11 @@ const Datastore2 = (opts) => {
             keyPairs.map((keyPair, keyPairIndex) => {
               entities[keyPair[0]] = results[keyPairIndex][0];
             });
-            return executorFn(entities);
+            return executorFn(entities)
+              .catch((...args) => {
+                executorFnReject = true;
+                return Promise.reject.apply(Promise, args);
+              });
           })
           .then((entities) => {
             const updateArray =  keyPairs.map((keyPair) => {
@@ -78,26 +86,35 @@ const Datastore2 = (opts) => {
                 .commit()
                 .catch(() => {
                   hashesOfKeyPairs.map((hash) => {
-                    console.log('unlocking', hash);
+                    // console.log('unlocking', hash);
                     TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
                   });
                   return Promise.reject();
                 });
           })
           .then(() => {
-            console.log('attempt success:', attempt);
+            // console.log('attempt success:', attempt);
             hashesOfKeyPairs.map((hash) => {
-              console.log('unlocking', hash);
+              // console.log('unlocking', hash);
               TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
             });
             return Promise.resolve();
           })
           .catch((...args) => {
-            console.log('attempt fail:', attempt);
-            if (attempt <= maxAttempts) {
-              attempt = attempt + 1;
+            // console.log('attempt fail:', attempt);
+            if (executorFnReject === true) {
+              hashesOfKeyPairs.map((hash) => {
+                // console.log('unlocking', hash);
+                TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
+              });
+            }
+            if (
+              // attempt <= maxAttempts &&
+              executorFnReject === false
+            ) {
+              // attempt = attempt + 1;
               return Promise.resolve()
-                .then(delay(150))
+                .then(delay(Rand(500, 1000)))
                 .then(() => tryCommit());
             } else {
               return Promise.resolve()
@@ -109,69 +126,6 @@ const Datastore2 = (opts) => {
       return tryCommit();
     }
   }
-  /*
-  class Transaction{
-    constructor () {
-      this.transaction = Datastore.transaction();
-    }
-    keys (keys) {
-      this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
-      return this;
-    }
-    init (executorFn, maxAttempts) {
-      const { transaction, keyPairs } = this;
-
-      const rollback = (...args) => {
-        return transaction.rollback()
-          .then(() => Promise.reject.apply(null, args));
-      };
-
-      return transaction
-        .run()
-        .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
-        .then((results) => {
-          let entities = {};
-          keyPairs.map((keyPair, keyPairIndex) => {
-            entities[keyPair[0]] = results[keyPairIndex][0];
-          });
-
-          const commit = (entities2) => {
-            const updateArray =  keyPairs.map((keyPair) => {
-              return {
-                key: keyPair[1],
-                data: entities2[keyPair[0]]
-              };
-            });
-            transaction.save(updateArray);
-            let delayMs = 100;
-            let recurse = () => {
-              // console.log('entities:', entities, );
-              console.log('attempt:', attempt, ' of ', maxAttempts);
-              return transaction
-                .commit()
-                .then(() => {
-                  console.log('commit ok');
-                  return Promise.resolve();
-                })
-                .catch(() => {
-                return executorFn({entities2, commit, rollback});
-                  return delay(delayMs)
-                    .then(() => {
-                      attempt = attempt + 1;
-                      delayMs = delayMs * 2;
-                      console.log('attempt <= maxAttempts', attempt <= maxAttempts)
-                      return attempt <= maxAttempts ? recurse() : rollback();
-                    })
-                });
-            }
-            return recurse();
-          };
-          return executorFn({entities, commit, rollback});
-        });
-
-    }
-  }
-  */
 
   class Query {
     constructor (kind, endCursor) {
@@ -265,7 +219,7 @@ const Datastore2 = (opts) => {
             } else {
               entities.temp = {};
               self.key = key;
-              console.log('resolving!');
+              // console.log('resolving!');
               return Promise.resolve(entities);
             }
           });

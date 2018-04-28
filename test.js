@@ -113,16 +113,14 @@ let selfTransaction = (selfKey, amount) => {
       self: selfKey
     })
     .exec((entities) => {
+      console.log('amount:', amount);
+      console.log('before:', entities.self.balance);
       entities.self.balance += amount;
-      console.log(entities.self.balance);
+      console.log('now:', entities.self.balance);
       return Promise.resolve(entities);
     });
 }
-
 let simpleTransaction = (senderKey, receiverKey, amount) => {
-  // console.log('sender key name:', senderKey.name);
-  // console.log('receiver key name:', receiverKey.name);
-  // console.log('transaction amount:', amount);
   return new Transaction()
     .keys({
       sender: senderKey,
@@ -130,36 +128,17 @@ let simpleTransaction = (senderKey, receiverKey, amount) => {
     })
     .exec((entities) => {
       if (amount > entities.sender.balance) {
-        return Promise.reject('FUCK');
+        return Promise.reject('amount greater than sender balance, cant proceed');
       } else {
+        console.log('amount:', amount);
+        console.log('before:', entities.sender.balance, entities.receiver.balance);
         entities.sender.balance -= amount;
         entities.receiver.balance += amount;
-        console.log(entities.sender.balance, entities.receiver.balance);
+        console.log('now:', entities.sender.balance, entities.receiver.balance);
         return Promise.resolve(entities);
       }
     });
 }
-test('7345345', t => {
-  console.log(' ');
-  console.log('#7: Transaction all.');
-  let p = [];
-  for (var i=1; i <= 10; i++){
-    // p.push(selfTransaction(entity1.key, 100));
-    // p.push(selfTransaction(entity2.key, 100));
-    p.push(simpleTransaction(entity1.key, entity2.key, 1));
-    p.push(simpleTransaction(entity1.key, entity2.key, 3));
-  }
-  return Promise.all(p)
-    .then((result) => {
-      console.log('Transaction fulfilled.');
-      t.pass();
-    })
-    .catch((e) => {
-      console.log('Transaction rejected.');
-      t.fail(e);
-    });
-});
-/*
 test('7', t => {
   console.log(' ');
   console.log('#7: Transaction should fulfill.');
@@ -169,9 +148,9 @@ test('7', t => {
       console.log('Transaction fulfilled.');
       t.pass();
     })
-    .catch((e) => {
+    .catch(() => {
       console.log('Transaction rejected.');
-      t.fail(e);
+      t.fail();
     });
 });
 test('8', t => {
@@ -183,8 +162,31 @@ test('8', t => {
       console.log('Transaction fulfilled.');
       t.fail();
     })
-    .catch((e) => {
+    .catch(() => {
       console.log('Transaction rejected.');
-      t.pass(e);
+      t.pass();
     });
-});*/
+});
+test('913123123', t => {
+  console.log(' ');
+  console.log('#9: Testing multi-key multiple transactions.');
+  let p = [];
+  let timeStart = Date.now();
+  for (var i=1; i <= 5; i++){
+    p.push(selfTransaction(entity1.key, 1000));
+    p.push(selfTransaction(entity2.key, 1000));
+    p.push(simpleTransaction(entity1.key, entity2.key, 1));
+  }
+  console.log(p);
+  return Promise.all(p)
+    .then((result) => {
+      console.log('Took', Date.now() - timeStart, 'ms');
+      console.log('Transaction fulfilled.');
+      t.pass();
+    })
+    .catch((...e) => {
+      console.log('Transaction rejected.');
+      console.log.apply(console, e);
+      t.fail();
+    });
+});
