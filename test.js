@@ -6,11 +6,9 @@ const opts = {
 
 import test from 'ava';
 
-const { Key, Entity, Query, Snapshot, Transaction } = require('./index')(opts);
+const { Key, Entity, Query, Transaction } = require('./index')(opts);
 
 const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-
 
 let entity1 = new Entity();
 let entity2 = new Entity();
@@ -109,26 +107,59 @@ test('6', t => {
     .catch(t.fail);
 });
 
+let selfTransaction = (selfKey, amount) => {
+  return new Transaction()
+    .keys({
+      self: selfKey
+    })
+    .exec((entities) => {
+      entities.self.balance += amount;
+      console.log(entities.self.balance);
+      return Promise.resolve(entities);
+    });
+}
+
 let simpleTransaction = (senderKey, receiverKey, amount) => {
-  console.log('sender key name:', senderKey.name);
-  console.log('receiver key name:', receiverKey.name);
-  console.log('transaction amount:', amount);
+  // console.log('sender key name:', senderKey.name);
+  // console.log('receiver key name:', receiverKey.name);
+  // console.log('transaction amount:', amount);
   return new Transaction()
     .keys({
       sender: senderKey,
       receiver: receiverKey
     })
-    .init(({entities, commit, rollback}) => {
+    .exec((entities) => {
       if (amount > entities.sender.balance) {
-        return rollback();
+        return Promise.reject('FUCK');
       } else {
         entities.sender.balance -= amount;
         entities.receiver.balance += amount;
-        return commit(entities);
+        console.log(entities.sender.balance, entities.receiver.balance);
+        return Promise.resolve(entities);
       }
     });
 }
-
+test('7345345', t => {
+  console.log(' ');
+  console.log('#7: Transaction all.');
+  let p = [];
+  for (var i=1; i <= 10; i++){
+    // p.push(selfTransaction(entity1.key, 100));
+    // p.push(selfTransaction(entity2.key, 100));
+    p.push(simpleTransaction(entity1.key, entity2.key, 1));
+    p.push(simpleTransaction(entity1.key, entity2.key, 3));
+  }
+  return Promise.all(p)
+    .then((result) => {
+      console.log('Transaction fulfilled.');
+      t.pass();
+    })
+    .catch((e) => {
+      console.log('Transaction rejected.');
+      t.fail(e);
+    });
+});
+/*
 test('7', t => {
   console.log(' ');
   console.log('#7: Transaction should fulfill.');
@@ -156,68 +187,4 @@ test('8', t => {
       console.log('Transaction rejected.');
       t.pass(e);
     });
-});
-test('9', t => {
-  console.log(' ');
-  console.log('#9: Snapshot capture test, with handled release');
-  let snapshot = new Snapshot();
-  return snapshot.capture({
-      alice: entity1.key,
-      bob: entity2.key
-    })
-    .then((entities) => {
-      console.log(entities.alice);
-      return snapshot.release();
-    })
-    .then(() => {
-      t.pass();
-    });
-});
-test('10', t => {
-  console.log(' ');
-  console.log('#10: Snapshot capture test, explicit release');
-  console.log('(should release snapshot and PASS in 3 seconds)');
-  console.log('(will fail if 5 seconds passed)');
-  return new Promise((resolve, reject) => {
-    let snapshot = new Snapshot(() => {
-        console.log('Snapshot timeout!!');
-        t.pass();
-        resolve();
-      }, 3000)
-      .capture({
-        alice: entity1.key,
-        bob: entity2.key
-      })
-      .then((entities) => {
-        console.log('entities:', entities);
-      });
-    setTimeout(() => {
-      t.fail();
-      resolve();
-    }, 5000);
-  });
-});
-test('11', t => {
-  console.log(' ');
-  console.log('#11: Snapshot capture test, unhandled release');
-  console.log('(should release snapshot and PASS in 30 seconds)');
-  console.log('(will fail if 35 seconds passed)');
-  return new Promise((resolve, reject) => {
-    let snapshot = new Snapshot(() => {
-        console.log('Snapshot timeout!!');
-        t.pass();
-        resolve();
-      })
-      .capture({
-        alice: entity1.key,
-        bob: entity2.key
-      })
-      .then((entities) => {
-        console.log('entities:', entities);
-      });
-    setTimeout(() => {
-      t.fail();
-      resolve();
-    }, 35000);
-  });
-});
+});*/

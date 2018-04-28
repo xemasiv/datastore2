@@ -1,6 +1,7 @@
 const GoogleCloudDatastore = require('@google-cloud/datastore');
 const uuid = require('uuid-random');
 const hasha = require('hasha');
+const delay = require('delay');
 const circular = require('circular-json');
 
 const Datastore2 = (opts) => {
@@ -11,6 +12,8 @@ const Datastore2 = (opts) => {
     return Datastore.key([kind, keyName]);
   };
 
+  const TransactionLocks = [];
+
   class Transaction{
     constructor () {
       this.transaction = Datastore.transaction();
@@ -19,22 +22,110 @@ const Datastore2 = (opts) => {
       this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
       return this;
     }
-    init (executorFn) {
+    exec (executorFn, maxAttempts) {
       const { transaction, keyPairs } = this;
+      maxAttempts = (Boolean(maxAttempts) === true && typeof maxAttempts === 'number') ? maxAttempts : 500;
+      let attempt = 1;
+      const Rand = (min, max) => {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      const hashesOfKeyPairs = keyPairs.map((keyPair) => {
+        return hasha(
+          ''.concat(keyPair[1].kind, keyPair[1].name)
+        );
+      });
+      const tryCommit = () => {
+        return Promise.resolve()
+          .then(() => {
+            let lockedHashFound = false;
+            for (var i = 0; i < hashesOfKeyPairs.length; i++) {
+              if (TransactionLocks.includes(hashesOfKeyPairs[i]) === true) {
+                lockedHashFound = true;
+                console.log('stopped @', i + 1, 'of', hashesOfKeyPairs.length);
+                break;
+              }
+            }
+            if (lockedHashFound === true) {
+              return Promise.reject();
+            } else {
+              hashesOfKeyPairs.map((hash) => {
+                console.log('locking', hash);
+                TransactionLocks.push(hash);
+              });
+              return Promise.resolve();
+            }
+          })
+          .then(() => transaction.run())
+          .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
+          .then((results) => {
+            let entities = {};
+            keyPairs.map((keyPair, keyPairIndex) => {
+              entities[keyPair[0]] = results[keyPairIndex][0];
+            });
+            return executorFn(entities);
+          })
+          .then((entities) => {
+            const updateArray =  keyPairs.map((keyPair) => {
+              return {
+                key: keyPair[1],
+                data: entities[keyPair[0]]
+              };
+            });
+            transaction.save(updateArray);
+            return transaction
+                .commit()
+                .catch(() => {
+                  hashesOfKeyPairs.map((hash) => {
+                    console.log('unlocking', hash);
+                    TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
+                  });
+                  return Promise.reject();
+                });
+          })
+          .then(() => {
+            console.log('attempt success:', attempt);
+            hashesOfKeyPairs.map((hash) => {
+              console.log('unlocking', hash);
+              TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
+            });
+            return Promise.resolve();
+          })
+          .catch((...args) => {
+            console.log('attempt fail:', attempt);
+            if (attempt <= maxAttempts) {
+              attempt = attempt + 1;
+              return Promise.resolve()
+                .then(delay(150))
+                .then(() => tryCommit());
+            } else {
+              return Promise.resolve()
+                .then(() => transaction.rollback())
+                .then(() => Promise.reject.apply(Promise, args));
+            }
+          });
+      }
+      return tryCommit();
+    }
+  }
+  /*
+  class Transaction{
+    constructor () {
+      this.transaction = Datastore.transaction();
+    }
+    keys (keys) {
+      this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
+      return this;
+    }
+    init (executorFn, maxAttempts) {
+      const { transaction, keyPairs } = this;
+
       const rollback = (...args) => {
         return transaction.rollback()
           .then(() => Promise.reject.apply(null, args));
       };
-      const commit = (entities) => {
-        const updateArray =  keyPairs.map((keyPair) => {
-          return {
-            key: keyPair[1],
-            data: entities[keyPair[0]]
-          };
-        });
-        transaction.save(updateArray);
-        return transaction.commit().catch(rollback);
-      };
+
       return transaction
         .run()
         .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
@@ -43,10 +134,44 @@ const Datastore2 = (opts) => {
           keyPairs.map((keyPair, keyPairIndex) => {
             entities[keyPair[0]] = results[keyPairIndex][0];
           });
+
+          const commit = (entities2) => {
+            const updateArray =  keyPairs.map((keyPair) => {
+              return {
+                key: keyPair[1],
+                data: entities2[keyPair[0]]
+              };
+            });
+            transaction.save(updateArray);
+            let delayMs = 100;
+            let recurse = () => {
+              // console.log('entities:', entities, );
+              console.log('attempt:', attempt, ' of ', maxAttempts);
+              return transaction
+                .commit()
+                .then(() => {
+                  console.log('commit ok');
+                  return Promise.resolve();
+                })
+                .catch(() => {
+                return executorFn({entities2, commit, rollback});
+                  return delay(delayMs)
+                    .then(() => {
+                      attempt = attempt + 1;
+                      delayMs = delayMs * 2;
+                      console.log('attempt <= maxAttempts', attempt <= maxAttempts)
+                      return attempt <= maxAttempts ? recurse() : rollback();
+                    })
+                });
+            }
+            return recurse();
+          };
           return executorFn({entities, commit, rollback});
         });
+
     }
   }
+  */
 
   class Query {
     constructor (kind, endCursor) {
@@ -134,13 +259,14 @@ const Datastore2 = (opts) => {
           .keys({
             temp: key
           })
-          .init(({entities, commit}) => {
+          .exec((entities) => {
             if (Boolean(entities.temp) === true) {
               return recurse();
             } else {
               entities.temp = {};
               self.key = key;
-              return commit(entities);
+              console.log('resolving!');
+              return Promise.resolve(entities);
             }
           });
       };
@@ -177,9 +303,9 @@ const Datastore2 = (opts) => {
         .keys({
           temp: key
         })
-        .init(({entities, commit}) => {
+        .exec((entities) => {
           entities.temp = updateData;
-          return commit(entities);
+          return Promise.resolve(entities);
         });
     }
     merge (mergeData) {
@@ -191,51 +317,8 @@ const Datastore2 = (opts) => {
         .keys({
           temp: key
         })
-        .init(({entities, commit}) => {
+        .exec((entities) => {
           entities.temp = Object.assign(entities.temp, mergeData);
-          return commit(entities);
-        });
-    }
-    static fetch (keys) {
-      return new Promise((resolve, reject) => {
-        new Transaction()
-          .keys(keys)
-          .init(resolve)
-          .catch(reject);
-      });
-    }
-  }
-
-  class Snapshot{
-    constructor (timeoutFn, timeout) {
-      this.timeoutFn = (
-        Boolean(timeoutFn) === true &&
-        typeof timeoutFn === 'function'
-      ) ? timeoutFn : null;
-      this.timeout = (
-        Boolean(timeout) === true &&
-        typeof timeout === 'number'
-      ) ? timeout : 30000;
-    }
-    capture (keys) {
-      let instance = this;
-      let timeoutFn = this.timeoutFn;
-      let timeout = this.timeout;
-      let T = new Transaction();
-      return T.keys(keys)
-        .init(({entities, commit}) => {
-          let timer = setTimeout(() => {
-            if (typeof timeoutFn === 'function') {
-              timeoutFn();
-            }
-            commit(entities);
-          }, timeout);
-          instance.entities = entities;
-          instance.release = () => {
-            instance.entities = undefined;
-            clearTimeout(timer)
-            return commit(entities);
-          }
           return Promise.resolve(entities);
         });
     }
@@ -245,8 +328,7 @@ const Datastore2 = (opts) => {
     Transaction,
     Key,
     Entity,
-    Query,
-    Snapshot
+    Query
   };
 };
 module.exports = Datastore2;
