@@ -3,6 +3,7 @@ const uuid = require('uuid-random');
 const hasha = require('hasha');
 const delay = require('delay');
 const circular = require('circular-json');
+const Dreadlock = require('dreadlocks');
 
 const Datastore2 = (opts) => {
   const Datastore = new GoogleCloudDatastore(opts);
@@ -12,8 +13,76 @@ const Datastore2 = (opts) => {
     return Datastore.key([kind, keyName]);
   };
 
-  const TransactionLocks = [];
+  const Dread = new Dreadlock();
+  class Transaction{
+    constructor () {
+      this.transaction = Datastore.transaction();
+    }
+    keys (keys) {
+      this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
+      return this;
+    }
+    exec (executorFn, maxAttempts) {
+      const { transaction, keyPairs } = this;
+      maxAttempts = (Boolean(maxAttempts) === true && typeof maxAttempts === 'number') ? maxAttempts : 500;
+      let attempt = 1;
+      const Rand = (min, max) => {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      const keySet = keyPairs.map((keyPair) => {
+        return hasha(
+          ''.concat(keyPair[1].kind, keyPair[1].name),
+          { algorithm: 'sha256' }
+        );
+      });
+      console.log('keySet:', keySet);
 
+      const tryCommit = () => {
+        let executorFnReject = false;
+        return Promise.resolve()
+          .then(() => Dread.lock(keySet))
+          .then(() => transaction.run())
+          .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
+          .then((results) => {
+            let entities = {};
+            keyPairs.map((keyPair, keyPairIndex) => {
+              entities[keyPair[0]] = results[keyPairIndex][0];
+            });
+            return executorFn(entities)
+              .catch((...args) => {
+                executorFnReject = true;
+                return Dread.release(keySet)
+                  .then(() => Promise.reject.apply(Promise, args));
+              });
+          })
+          .then((entities) => {
+            const updateArray =  keyPairs.map((keyPair) => {
+              return {
+                key: keyPair[1],
+                data: entities[keyPair[0]]
+              };
+            });
+            transaction.save(updateArray);
+            return transaction
+              .commit()
+              .catch(() => {
+                return Dread.release(keySet)
+                  .then(() => Promise.reject());
+              });
+          })
+          .then(() => Dread.release(keySet))
+          .catch((...args) => {
+            return Promise.resolve()
+              .then(() => transaction.rollback())
+              .then(() => Promise.reject.apply(Promise, args));
+          });
+      }
+      return tryCommit();
+    }
+  }
+  /*
   class Transaction{
     constructor () {
       this.transaction = Datastore.transaction();
@@ -111,6 +180,7 @@ const Datastore2 = (opts) => {
       return tryCommit(32);
     }
   }
+  */
 
   class Query {
     constructor (kind, endCursor) {
