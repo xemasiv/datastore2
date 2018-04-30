@@ -1,7 +1,6 @@
 const GoogleCloudDatastore = require('@google-cloud/datastore');
 const uuid = require('uuid-random');
 const hasha = require('hasha');
-const delay = require('delay');
 const circular = require('circular-json');
 const Dreadlock = require('dreadlocks');
 
@@ -22,25 +21,17 @@ const Datastore2 = (opts) => {
       this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
       return this;
     }
-    exec (executorFn, maxAttempts) {
+    exec (executorFn) {
       const { transaction, keyPairs } = this;
-      maxAttempts = (Boolean(maxAttempts) === true && typeof maxAttempts === 'number') ? maxAttempts : 500;
-      let attempt = 1;
-      const Rand = (min, max) => {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-      }
-      const keySet = keyPairs.map((keyPair) => {
-        return hasha(
-          ''.concat(keyPair[1].kind, keyPair[1].name),
-          { algorithm: 'sha256' }
-        );
-      });
-      console.log('keySet:', keySet);
-
-      const tryCommit = () => {
-        let executorFnReject = false;
+      if (Boolean(keyPairs) === false) {
+        return Promise.reject("Transaction missing keys(), can't proceed.");
+      } else {
+        const keySet = keyPairs.map((keyPair) => {
+          return hasha(
+            ''.concat(keyPair[1].kind, keyPair[1].name),
+            { algorithm: 'sha256' }
+          );
+        });
         return Promise.resolve()
           .then(() => Dread.lock(keySet))
           .then(() => transaction.run())
@@ -52,7 +43,6 @@ const Datastore2 = (opts) => {
             });
             return executorFn(entities)
               .catch((...args) => {
-                executorFnReject = true;
                 return Dread.release(keySet)
                   .then(() => Promise.reject.apply(Promise, args));
               });
@@ -79,108 +69,8 @@ const Datastore2 = (opts) => {
               .then(() => Promise.reject.apply(Promise, args));
           });
       }
-      return tryCommit();
     }
   }
-  /*
-  class Transaction{
-    constructor () {
-      this.transaction = Datastore.transaction();
-    }
-    keys (keys) {
-      this.keyPairs = Object.keys(keys).map((key) => [key, keys[key]]);
-      return this;
-    }
-    exec (executorFn, maxAttempts) {
-      const { transaction, keyPairs } = this;
-      maxAttempts = (Boolean(maxAttempts) === true && typeof maxAttempts === 'number') ? maxAttempts : 500;
-      let attempt = 1;
-      const Rand = (min, max) => {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-      }
-      const hashesOfKeyPairs = keyPairs.map((keyPair) => {
-        return hasha(
-          ''.concat(keyPair[1].kind, keyPair[1].name),
-          { algorithm: 'sha256' }
-        );
-      });
-      const tryCommit = (backOff) => {
-        let executorFnReject = false;
-        return Promise.resolve()
-          .then(() => {
-            let lockedHashFound = false;
-            for (var i = 0; i < hashesOfKeyPairs.length; i++) {
-              if (TransactionLocks.includes(hashesOfKeyPairs[i]) === true) {
-                lockedHashFound = true;
-                break;
-              }
-            }
-            if (lockedHashFound === true) {
-              return Promise.reject();
-            } else {
-              hashesOfKeyPairs.map((hash) => {
-                TransactionLocks.push(hash);
-              });
-              return Promise.resolve();
-            }
-          })
-          .then(() => transaction.run())
-          .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
-          .then((results) => {
-            let entities = {};
-            keyPairs.map((keyPair, keyPairIndex) => {
-              entities[keyPair[0]] = results[keyPairIndex][0];
-            });
-            return executorFn(entities)
-              .catch((...args) => {
-                executorFnReject = true;
-                hashesOfKeyPairs.map((hash) => {
-                  TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
-                });
-                return Promise.reject.apply(Promise, args);
-              });
-          })
-          .then((entities) => {
-            const updateArray =  keyPairs.map((keyPair) => {
-              return {
-                key: keyPair[1],
-                data: entities[keyPair[0]]
-              };
-            });
-            transaction.save(updateArray);
-            return transaction
-              .commit()
-              .catch(() => {
-                hashesOfKeyPairs.map((hash) => {
-                  TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
-                });
-                return Promise.reject();
-              });
-          })
-          .then(() => {
-            hashesOfKeyPairs.map((hash) => {
-              TransactionLocks.splice(TransactionLocks.indexOf(hash), 1);
-            });
-            return Promise.resolve();
-          })
-          .catch((...args) => {
-            if (executorFnReject === false) {
-              return Promise.resolve()
-                .then(delay(backOff))
-                .then(() => tryCommit(backOff < 256 ? backOff * 2 : 32));
-            } else {
-              return Promise.resolve()
-                .then(() => transaction.rollback())
-                .then(() => Promise.reject.apply(Promise, args));
-            }
-          });
-      }
-      return tryCommit(32);
-    }
-  }
-  */
 
   class Query {
     constructor (kind, endCursor) {
@@ -274,7 +164,6 @@ const Datastore2 = (opts) => {
             } else {
               entities.temp = {};
               self.key = key;
-              // console.log('resolving!');
               return Promise.resolve(entities);
             }
           });

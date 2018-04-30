@@ -1,4 +1,4 @@
-## Datastore2
+# Datastore2
 
 * Atomic transactions
   * Either all entities get commits, or none at all.
@@ -6,16 +6,30 @@
   * Take in fetched entities, return modified entities
   * Return `Promise.resolve(entities)` to proceed transaction.
   * Return `Promise.reject(...whatever)` to cancel transaction, and pass whatever to your `catch`.
-* Entity locking
+* Entity locking with `dreadlocks`
   * Transaction will be delayed if one of its entities are involved in other transactions
-  * Uses exponential back-off for retries (32ms to 256ms, then back to 32ms)
-  * Ensures isolation and consistency of involed entities in transactions.
+  * Ensures isolation and consistency of involved entities in transactions.
 * Simplified entity search from supplied filters.
   * Saves you the hassle of manually crafting queries.
 * Simplified entity creation from UUIDv4 key name.
   * Also uses transactions, so users don't unknowingly write on the same key name.
 * Simplified queries with endCursor and query hash provided for caching.
   * Easier search, and unique hash for each query instance for easier caching.
+
+---
+
+### Changelog
+
+* 2.x
+  * Use of `dreadlocks` and use of pure function as executor function in Transactions..
+    * Fixes data integrity & consistency problems on same-entity transactions that commit at the same time.
+  * Added Query result hashing for caching purposes.
+  * Added AVA tests
+* 1.x
+  * Transaction class
+  * Queue class
+  * Entity class
+  * Key class
 
 ---
 
@@ -167,11 +181,12 @@ Key {
 * Flow Notes:
   * `new Transaction()` creates a Transaction.
   * Then you supply your mapped keys to `.keys()`
-  * You call `.init()` to supply your executor function.
-  * Your executor function must destructure three arguments:
-    * entities - the entities involved in transaction, modify them DIRECTLY as you wish.
-    * commit - a callback function to save the changes and commit the transaction.
-    * rollback - a callback function to rollback your current transaction.
+  * You call `.exec()` to supply your executor function.
+  * Executor function accept one argument:
+    * `entities` - the entities involved in transaction, modify them DIRECTLY as you wish.
+  * Executor function must return Promise
+    * `Promise.resolve()` allows transaction to proceed.
+    * `Promise.reject() `discontinues transaction, rollback.
 * Example Notes:
   * `Alice.balance` is 50
   * `Bob.balance` is 0
@@ -185,10 +200,14 @@ const transactionAmount = 50;
 
 new Transaction()
   .keys({ alice: aliceKey, bob: bobKey })
-  .init(({entities, commit, rollback}) => {
+  .exec((entities) => {
     entities.alice.balance -= transactionAmount;
     entities.bob.balance += transactionAmount;
-    return commit(entities);
+    if (entities.alice.balance < 0) {
+      return Promise.reject("Alice can't send that much.");
+    } else {
+      return Promise.resolve(entities);
+    }
   });
 ```
 
@@ -217,14 +236,15 @@ new Transaction()
     * `limit` is integer, for example: 1
   * `.runQuery()`
     * Runs the query.
-    * Returns object with `entities`, `keys`, `endCursor`.
+    * Returns object
+      * Has `entities`, `keys`, `endCursor` and `hash`.
 
 ```
   new Query('Persons')
     .filter('first_name', '=', 'Alice')
     .limit(1)
     .runQuery()
-    .then(({ entities, keys, endCursor }) => {
+    .then(({ entities, keys, endCursor, hash }) => {
 
       });
 ```

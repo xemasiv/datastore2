@@ -2,14 +2,13 @@
   "dependencies": {
     "@google-cloud/datastore": "^1.4.0",
     "circular-json": "^0.5.3",
-    "delay": "^2.0.0",
     "dreadlocks": "^1.2.0",
     "hasha": "^3.0.0",
     "uuid-random": "^1.0.6"
   },
   "name": "datastore2",
-  "description": "---",
-  "version": "2.0.7-alpha",
+  "description": "Atomic transactions made easy for Google Cloud Datatore",
+  "version": "2.1.0",
   "main": "index.js",
   "devDependencies": {
     "ava": "1.0.0-beta.4"
