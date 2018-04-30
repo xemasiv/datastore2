@@ -162,13 +162,14 @@ const Datastore2 = (opts) => {
           })
           .exec((entities) => {
             if (Boolean(entities.temp) === true) {
-              return recurse();
+              return Promise.reject();
             } else {
               entities.temp = {};
               self.key = key;
               return Promise.resolve(entities);
             }
-          });
+          })
+		  .catch(() => recurse());
       };
       return recurse();
     }

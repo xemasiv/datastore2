@@ -15,6 +15,36 @@ let entity1 = new Entity();
 let entity2 = new Entity();
 let entity3 = new Entity();
 
+test('0.1', t => {
+  console.log('#0.1: Batch Entity.fromUUID() test');
+  let p = [];
+  const pinCodeGenerate = (l) => {
+	var b = "", c = "23456789cfghjmpqrvwx";
+	for (var d = 0; d < l; d++)
+	  b += c.charAt(Math.floor(Math.random() * c.length));
+	return b;
+  }
+  var date_created = Date.now();
+  for(var i = 1; i <= 10; i++) {
+	let person = new Entity().setKind('Persons');
+	let upsertData = {
+	  date_created: date_created + i,
+	  pin_code: pinCodeGenerate(6),
+	  insert_number: i
+	};
+	p.push(
+	  new Promise((resolve, reject) => {
+		return person.fromUUID()
+		.then(() => person.update(upsertData))
+		.then(resolve)
+		.catch(reject);
+	  })
+	);
+  }
+  return Promise.all(p)
+    .then(t.pass)
+    .catch(t.fail);
+});
 test('1', t => {
   console.log('#1: Entity1 fromUUID, RegEx test');
   return entity1.setKind('Persons').fromUUID()
