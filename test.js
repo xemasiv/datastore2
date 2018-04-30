@@ -174,8 +174,11 @@ test('9', t => {
   console.log('#9: Testing multi-key multiple transactions.');
   let p = [];
   let timeStart = Date.now();
-  for (var i=1; i <= 10; i++){
+  for (var i=1; i <= 100; i++){
+    p.push(selfTransaction(entity1.key, 500));
+    p.push(selfTransaction(entity2.key, 500));
     p.push(simpleTransaction(entity1.key, entity2.key, 5));
+    p.push(simpleTransaction(entity2.key, entity1.key, 5));
   }
   return Promise.all(p)
     .then((result) => {
