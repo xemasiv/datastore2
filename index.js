@@ -2,7 +2,7 @@ const GCDatastore = require('@google-cloud/datastore');
 const uuid        = require('uuid-random');
 const hasha       = require('hasha');
 const circular    = require('circular-json');
-const Dreadlock   = require('dreadlocks');
+const Dreadlock   = require('dreadlocks2');
 const Datastore2 = (opts) => {
   const Datastore = new GCDatastore(opts);
 
