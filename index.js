@@ -1,11 +1,11 @@
-const GoogleCloudDatastore = require('@google-cloud/datastore');
-const uuid = require('uuid-random');
-const hasha = require('hasha');
-const circular = require('circular-json');
-const Dreadlock = require('dreadlocks');
-
+const GCDatastore = require('@google-cloud/datastore');
+const uuid        = require('uuid-random');
+const hasha       = require('hasha');
+const circular    = require('circular-json');
+const Dreadlock   = require('dreadlocks');
+const Joi         = require('joi');
 const Datastore2 = (opts) => {
-  const Datastore = new GoogleCloudDatastore(opts);
+  const Datastore = new GCDatastore(opts);
 
   const Key = (kind, keyName) => {
     keyName = String(keyName);
@@ -127,6 +127,9 @@ const Datastore2 = (opts) => {
   };
 
   class Entity{
+    useSchema (schema) {
+      this.schema = schema;
+    }
     setKind (kind) {
       if (Boolean(kind) === false) {
         return Promise.reject("Missing KIND param, setKind can't proceed.");
@@ -194,8 +197,15 @@ const Datastore2 = (opts) => {
     }
     update (updateData) {
       let key = this.key;
+      let schema = this.schema;
       if (Boolean(key) === false) {
         return Promise.reject("Missing entity KEY, UPDATE can't proceed.");
+      }
+      if (Boolean(schema) === true) {
+        const result = Joi.validate(updateData, schema);
+        if (result.error !== null) {
+          return Promise.reject(result.error.details);
+        }
       }
       return new Transaction()
         .keys({
@@ -208,8 +218,15 @@ const Datastore2 = (opts) => {
     }
     merge (mergeData) {
       let key = this.key;
+      let schema = this.schema;
       if (Boolean(key) === false) {
         return Promise.reject("Missing entity KEY, MERGE can't proceed.");
+      }
+      if (Boolean(schema) === true) {
+        const result = Joi.validate(mergeData, schema);
+        if (result.error !== null) {
+          return Promise.reject(result.error.details);
+        }
       }
       return new Transaction()
         .keys({
