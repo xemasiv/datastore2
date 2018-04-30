@@ -184,7 +184,7 @@ test('9', t => {
     .then((result) => {
       let ms = Date.now() - timeStart;
       console.log('Took', ms, 'ms');
-      console.log((ms / 1000) / p.length, 'transactions / second');
+      console.log(parseFloat((ms / 1000) / p.length).toFixed(2), 'ms / transaction');
       console.log('Transaction fulfilled.');
       t.pass();
     })

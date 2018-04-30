@@ -1212,9 +1212,9 @@ dot-prop@^4.1.0, dot-prop@^4.2.0:
   dependencies:
     is-obj "^1.0.0"
 
-dreadlocks2@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/dreadlocks2/-/dreadlocks2-1.0.0.tgz#3c41cf2e75ce2b98df5489253254a3c0296f7b08"
+dreadlocks2@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/dreadlocks2/-/dreadlocks2-2.0.0.tgz#56388c26be539ae36fcf5bb0151cb52877560417"
 
 duplexer3@^0.1.4:
   version "0.1.4"
