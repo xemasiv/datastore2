@@ -24,7 +24,37 @@
   * Use of `dreadlocks` and use of pure function as executor function in Transactions..
     * Fixes data integrity & consistency problems on same-entity transactions that commit at the same time.
   * Added Query result hashing for caching purposes.
+    ```
+    new Query('Persons')
+      .runQuery(({ entities, keys, endCursor, hash }) => {
+        console.log(hash);
+      });
+    ```
   * Added AVA tests
+    ```
+    npm test
+    ```
+  * Added `Entity.useValidator` support. This allows you to validate your data before Entity `update` and `merge` calls. Just return `Promise.resolve()` to proceed, or `Promise.reject(whatever)` to cancel.
+    ```
+    const Joi = require('joi');
+    entity3.useValidator((data) => {
+      const schema = {
+        first_name: Joi.string().alphanum(),
+        last_name: Joi.string().alphanum(),
+        email: Joi.string().email()
+      };
+      const result = Joi.validate(data, schema);
+      if (result.error !== null) {
+        return Promise.reject(result.error.details);
+      } else {
+        return Promise.resolve();
+      }
+    });
+    ```
+    * Use `joi` or `ajv` as you wish:
+      * https://www.npmjs.com/package/joi
+      * https://www.npmjs.com/package/ajv
+      * Note: Please be mindful about using `required` fields on your schema. The Entity `merge` method could fail when a required field is missing (that's the point of merge, right?)
 * 1.x
   * Transaction class
   * Queue class

@@ -3,7 +3,6 @@ const uuid        = require('uuid-random');
 const hasha       = require('hasha');
 const circular    = require('circular-json');
 const Dreadlock   = require('dreadlocks');
-const Joi         = require('joi');
 const Datastore2 = (opts) => {
   const Datastore = new GCDatastore(opts);
 
@@ -127,8 +126,8 @@ const Datastore2 = (opts) => {
   };
 
   class Entity{
-    useSchema (schema) {
-      this.schema = schema;
+    useValidator (validatorFn) {
+      this.validatorFn = validatorFn;
     }
     setKind (kind) {
       if (Boolean(kind) === false) {
@@ -197,44 +196,52 @@ const Datastore2 = (opts) => {
     }
     update (updateData) {
       let key = this.key;
-      let schema = this.schema;
+      let validatorFn = this.validatorFn;
       if (Boolean(key) === false) {
         return Promise.reject("Missing entity KEY, UPDATE can't proceed.");
       }
-      if (Boolean(schema) === true) {
-        const result = Joi.validate(updateData, schema);
-        if (result.error !== null) {
-          return Promise.reject(result.error.details);
-        }
-      }
-      return new Transaction()
-        .keys({
-          temp: key
+      return Promise.resolve()
+        .then(() => {
+          if (Boolean(validatorFn) === true) {
+            return validatorFn(updateData);
+          } else {
+            return Promise.resolve();
+          }
         })
-        .exec((entities) => {
-          entities.temp = updateData;
-          return Promise.resolve(entities);
+        .then(() => {
+          return new Transaction()
+            .keys({
+              temp: key
+            })
+            .exec((entities) => {
+              entities.temp = updateData;
+              return Promise.resolve(entities);
+            });
         });
     }
     merge (mergeData) {
       let key = this.key;
-      let schema = this.schema;
+      let validatorFn = this.validatorFn;
       if (Boolean(key) === false) {
         return Promise.reject("Missing entity KEY, MERGE can't proceed.");
       }
-      if (Boolean(schema) === true) {
-        const result = Joi.validate(mergeData, schema);
-        if (result.error !== null) {
-          return Promise.reject(result.error.details);
-        }
-      }
-      return new Transaction()
-        .keys({
-          temp: key
+      return Promise.resolve()
+        .then(() => {
+          if (Boolean(validatorFn) === true) {
+            return validatorFn(mergeData);
+          } else {
+            return Promise.resolve();
+          }
         })
-        .exec((entities) => {
-          entities.temp = Object.assign(entities.temp, mergeData);
-          return Promise.resolve(entities);
+        .then(() => {
+          return new Transaction()
+            .keys({
+              temp: key
+            })
+            .exec((entities) => {
+              entities.temp = Object.assign(entities.temp, mergeData);
+              return Promise.resolve(entities);
+            });
         });
     }
   }

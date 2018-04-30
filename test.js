@@ -8,20 +8,12 @@ import test from 'ava';
 
 const { Key, Entity, Query, Transaction } = require('./index')(opts);
 
-const Joi = require('joi');
-
-const schema_entity3 = {
-  first_name: Joi.string().alphanum(),
-  last_name: Joi.string().alphanum(),
-  email: Joi.string().email()
-};
 
 const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 let entity1 = new Entity();
 let entity2 = new Entity();
 let entity3 = new Entity();
-
 
 test('1', t => {
   console.log('#1: Entity1 fromUUID, RegEx test');
@@ -199,8 +191,23 @@ test('9', t => {
       t.fail();
     });
 });
-entity3.useSchema(schema_entity3);
+
+const Joi = require('joi');
+entity3.useValidator((data) => {
+  const schema = {
+    first_name: Joi.string().alphanum(),
+    last_name: Joi.string().alphanum(),
+    email: Joi.string().email()
+  };
+  const result = Joi.validate(data, schema);
+  if (result.error !== null) {
+    return Promise.reject(result.error.details);
+  } else {
+    return Promise.resolve();
+  }
+});
 test('10', t => {
+  console.log(' ');
   console.log('#10: Entity3 fromUUID, UPDATE w/ schema');
   return entity3.setKind('Persons').fromUUID()
     .then(() => {
@@ -221,6 +228,7 @@ test('10', t => {
     });
 });
 test('11', t => {
+  console.log(' ');
   console.log('#11: Entity3 w/ schema UPDATE, should reject');
   return Promise.resolve()
     .then(() => {
@@ -241,6 +249,7 @@ test('11', t => {
     });
 });
 test('12', t => {
+  console.log(' ');
   console.log('#12: Entity3, MERGE w/ schema');
   return Promise.resolve()
     .then(() => {
@@ -259,6 +268,7 @@ test('12', t => {
     });
 });
 test('13', t => {
+  console.log(' ');
   console.log('#13: Entity3 w/ schema MERGE, should reject');
   return Promise.resolve()
     .then(() => {
