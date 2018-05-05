@@ -21,6 +21,8 @@
 ### Changelog
 
 * 2.x
+  * Added `Entity.delete()`
+  * Added `Query.offset(x)`
   * Use of `dreadlocks` and use of pure function as executor function in Transactions..
     * Fixes data integrity & consistency problems on same-entity transactions that commit at the same time.
   * Added Query result hashing for caching purposes.
@@ -241,6 +243,15 @@ new Transaction()
   });
 ```
 
+##### Entity delete:
+```
+const aliceKey = Key('Persons', 'alice-key-name')
+
+let Alice = new Entity().setKey(aliceKey);
+Alice.delete()
+  .then(() => console.log('Alice deleted!'));
+```
+
 ##### Entity queries:
 
 * Notes:
@@ -262,6 +273,8 @@ new Transaction()
     * `col` is column, for example: 'first_name'
     * `operator`, for example: '='
     * `val` is value, for example: 'Alice'
+  * `.offset(val)`
+    * `val` is value, for example: 5
   * `.limit(limit)`
     * `limit` is integer, for example: 1
   * `.runQuery()`

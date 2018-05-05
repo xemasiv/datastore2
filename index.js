@@ -173,7 +173,7 @@ const Datastore2 = (opts) => {
               return Promise.resolve(entities);
             }
           })
-		  .catch(() => recurse());
+		      .catch(() => recurse());
       };
       return recurse();
     }
