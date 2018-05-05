@@ -281,6 +281,11 @@ new Transaction()
 
 ---
 
-### LICENSE
+## License
 
-![C](https://upload.wikimedia.org/wikipedia/commons/8/84/Public_Domain_Mark_button.svg) ![0](https://upload.wikimedia.org/wikipedia/commons/6/69/CC0_button.svg)
+Attribution 4.0 International (CC BY 4.0)
+
+* https://creativecommons.org/licenses/by/4.0/
+* https://creativecommons.org/licenses/by/4.0/legalcode.txt
+
+![cc](https://creativecommons.org/images/deed/cc_blue_x2.png) ![by](https://creativecommons.org/images/deed/attribution_icon_blue_x2.png)
