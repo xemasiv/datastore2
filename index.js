@@ -249,6 +249,13 @@ const Datastore2 = (opts) => {
             });
         });
     }
+    delete () {
+      let key = this.key;
+      if (Boolean(key) === false) {
+        return Promise.reject("Entity KEY missing, delete can't proceed.");
+      }
+      return Datastore.delete(key);
+    }
   }
 
   return {
