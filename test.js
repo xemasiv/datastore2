@@ -15,7 +15,25 @@ let entity1 = new Entity();
 let entity2 = new Entity();
 let entity3 = new Entity();
 
+
+test('test offset', t => {
+  console.log('Query test offset');
+  return Promise.resolve()
+    .then(() => {
+      return new Query('Persons').limit(1).runQuery()
+    })
+    .then(({entities}) => {
+      console.log('no offset:', entities);
+      return new Query('Persons').limit(1).offset(1).runQuery()
+    })
+    .then(({entities}) => {
+      console.log('with offset:', entities);
+      t.pass();
+    })
+    .catch(t.fail);
+});
 test('0.1', t => {
+console.log(' ');
   console.log('#0.1: Batch Entity.fromUUID() test');
   let p = [];
   const pinCodeGenerate = (l) => {

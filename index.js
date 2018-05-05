@@ -89,6 +89,10 @@ const Datastore2 = (opts) => {
       });
       return this;
     }
+    offset (val) {
+      this._query = this._query.offset(val);
+      return this;
+    }
     select (fields) {
       this._query = this._query.select(fields);
       return this;
