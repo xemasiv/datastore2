@@ -12,7 +12,7 @@ const Datastore2 = (opts) => {
   };
 
   const Dread = new Dreadlock();
-  class Transaction{
+  class Transaction {
     constructor () {
       this.transaction = Datastore.transaction();
     }
@@ -129,7 +129,7 @@ const Datastore2 = (opts) => {
     }
   };
 
-  class Entity{
+  class Entity {
     useValidator (validatorFn) {
       this.validatorFn = validatorFn;
     }
