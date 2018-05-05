@@ -13,7 +13,7 @@
   * Saves you the hassle of manually crafting queries.
 * Simplified entity creation from UUIDv4 key name.
   * Also uses transactions, so users don't unknowingly write on the same key name.
-* Simplified queries with endCursor and query hash provided for caching.
+* Simplified queries with `endCursor` and query hash provided for caching.
   * Easier search, and unique hash for each query instance for easier caching.
 
 ---
