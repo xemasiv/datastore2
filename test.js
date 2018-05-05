@@ -53,7 +53,7 @@ console.log(' ');
 	p.push(
 	  new Promise((resolve, reject) => {
 		return person.fromUUID()
-		.then(() => person.update(upsertData))
+		.then(() => person.upsert(upsertData))
 		.then(resolve)
 		.catch(reject);
 	  })
@@ -75,8 +75,8 @@ test('1', t => {
 });
 test('2', t => {
   console.log(' ');
-  console.log('#2: Entity1 UPDATE first_name = Ana');
-  return entity1.update({
+  console.log('#2: Entity1 UPSERT first_name = Ana');
+  return entity1.upsert({
       first_name: 'Ana'
     })
     .then(() => {
@@ -91,8 +91,8 @@ test('2', t => {
 });
 test('3', t => {
   console.log(' ');
-  console.log('#3: Entity1 UPDATE first_name = Alice');
-  return entity1.update({
+  console.log('#3: Entity1 UPSERT first_name = Alice');
+  return entity1.upsert({
       first_name: 'Alice'
     })
     .then(() => {
@@ -138,8 +138,8 @@ test('5', t => {
 });
 test('6', t => {
   console.log(' ');
-  console.log('#6: Entity2 UPDATE first_name = Bob, balance = 0');
-  return entity2.update({
+  console.log('#6: Entity2 UPSERT first_name = Bob, balance = 0');
+  return entity2.upsert({
       first_name: 'Bob',
       balance: 0
     })
@@ -222,7 +222,7 @@ test('9', t => {
   console.log('#9: Testing multi-key multiple transactions.');
   let p = [];
   let timeStart = Date.now();
-  for (var i=1; i <= 100; i++){
+  for (var i=1; i <= 5; i++){
     p.push(selfTransaction(entity1.key, 500));
     p.push(selfTransaction(entity2.key, 500));
     p.push(simpleTransaction(entity1.key, entity2.key, 5));
@@ -244,7 +244,7 @@ test('9', t => {
 });
 
 const Joi = require('joi');
-entity3.useValidator((data) => {
+entity3.setValidator((data) => {
   const schema = {
     first_name: Joi.string().alphanum(),
     last_name: Joi.string().alphanum(),
@@ -259,10 +259,10 @@ entity3.useValidator((data) => {
 });
 test('10', t => {
   console.log(' ');
-  console.log('#10: Entity3 fromUUID, UPDATE w/ schema');
+  console.log('#10: Entity3 fromUUID, UPSERT w/ schema');
   return entity3.setKind('Persons').fromUUID()
     .then(() => {
-      return entity3.update({
+      return entity3.upsert({
         first_name: 'Charles',
         last_name: 'Babbage',
         email: 'charles@babbage.com'
@@ -280,10 +280,10 @@ test('10', t => {
 });
 test('11', t => {
   console.log(' ');
-  console.log('#11: Entity3 w/ schema UPDATE, should reject');
+  console.log('#11: Entity3 w/ schema UPSERT, should reject');
   return Promise.resolve()
     .then(() => {
-      return entity3.update({
+      return entity3.upsert({
         first_name: 'Charles',
         last_name: 'Babbage',
         email: 123

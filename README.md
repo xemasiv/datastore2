@@ -20,6 +20,10 @@
 
 ### Changelog
 
+* 3.x
+  * Breaking changes
+    * `Entity.update` to `Entity.upsert`
+    * `Entity.useValidator` to `Entity.setValidator`
 * 2.x
   * Added `Entity.delete()`
   * Added `Query.offset(x)`
@@ -36,10 +40,10 @@
     ```
     npm test
     ```
-  * Added `Entity.useValidator` support. This allows you to validate your data before Entity `update` and `merge` calls. Just return `Promise.resolve()` to proceed, or `Promise.reject(whatever)` to cancel.
+  * Added `Entity.setValidator` support. This allows you to validate your data before Entity `upsert` and `merge` calls. Just return `Promise.resolve()` to proceed, or `Promise.reject(whatever)` to cancel.
     ```
     const Joi = require('joi');
-    entity3.useValidator((data) => {
+    entity3.setValidator((data) => {
       const schema = {
         first_name: Joi.string().alphanum(),
         last_name: Joi.string().alphanum(),
@@ -121,7 +125,7 @@ Key {
   path: [Getter] }
 ```
 
-##### Entity data update:
+##### Entity data upsert:
 
 * Notes:
   * Overwrites existing entity data.
@@ -130,7 +134,7 @@ Key {
 let Alice = new Entity();
 Alice.setKind('Persons').fromUUID()
   .then(() => {
-    return Alice.update({
+    return Alice.upsert({
       first_name: 'Alice'
     });
   });
@@ -171,14 +175,14 @@ let aliceKey = Key('Persons', 'alice-key-name');
 
 * Notes:
   * No need to call `setKind()` first since entity kind is already supplied in your Key.
-  * This flow is ideal for direct updates and merges.
+  * This flow is ideal for direct upserts and merges.
   * If you intend to read the data first before performing mutations, using the `Transaction` class is highly recommended.
 
 ```
 let aliceKey = Key('Persons', 'alice-key-name');
 let Alice = new Entity();
 Alice.setKey(aliceKey)
-  // .update() or .merge() goes here
+  // .upsert() or .merge() goes here
 ```
 
 ##### Entity from filters:

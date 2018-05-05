@@ -130,7 +130,7 @@ const Datastore2 = (opts) => {
   };
 
   class Entity {
-    useValidator (validatorFn) {
+    setValidator (validatorFn) {
       this.validatorFn = validatorFn;
     }
     setKind (kind) {
@@ -199,16 +199,16 @@ const Datastore2 = (opts) => {
           }
         });
     }
-    update (updateData) {
+    upsert (upsertData) {
       let key = this.key;
       let validatorFn = this.validatorFn;
       if (Boolean(key) === false) {
-        return Promise.reject("Missing entity KEY, UPDATE can't proceed.");
+        return Promise.reject("Missing entity KEY, UPSERT can't proceed.");
       }
       return Promise.resolve()
         .then(() => {
           if (Boolean(validatorFn) === true) {
-            return validatorFn(updateData);
+            return validatorFn(upsertData);
           } else {
             return Promise.resolve();
           }
@@ -219,7 +219,7 @@ const Datastore2 = (opts) => {
               temp: key
             })
             .exec((entities) => {
-              entities.temp = updateData;
+              entities.temp = upsertData;
               return Promise.resolve(entities);
             });
         });
