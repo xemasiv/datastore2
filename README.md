@@ -20,10 +20,12 @@
 
 ### Changelog
 
+* 4.x
+  * Improved exception handling.
 * 3.x
   * Breaking changes
-    * `Entity.update` to `Entity.upsert`
-    * `Entity.useValidator` to `Entity.setValidator`
+    * `Entity.update` changed to `Entity.upsert`
+    * `Entity.useValidator` changed to `Entity.setValidator`
 * 2.x
   * Added `Entity.delete()`
   * Added `Query.offset(x)`

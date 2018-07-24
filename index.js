@@ -41,9 +41,9 @@ const Datastore2 = (opts) => {
               entities[keyPair[0]] = results[keyPairIndex][0];
             });
             return executorFn(entities)
-              .catch((...args) => {
+              .catch((reason) => {
                 return Dread.release(keySet)
-                  .then(() => Promise.reject.apply(Promise, args));
+                  .then(() => Promise.reject(reason));
               });
           })
           .then((entities) => {
@@ -56,16 +56,16 @@ const Datastore2 = (opts) => {
             transaction.save(updateArray);
             return transaction
               .commit()
-              .catch(() => {
+              .catch((reason) => {
                 return Dread.release(keySet)
-                  .then(() => Promise.reject());
+                  .then(() => Promise.reject(reason));
               });
           })
           .then(() => Dread.release(keySet))
-          .catch((...args) => {
+          .catch((reason) => {
             return Promise.resolve()
               .then(() => transaction.rollback())
-              .then(() => Promise.reject.apply(Promise, args));
+              .then(() => Promise.reject(reason));
           });
       }
     }

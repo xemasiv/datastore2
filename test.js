@@ -9,6 +9,32 @@ import test from 'ava';
 const { Key, Entity, Query, Transaction } = require('./index')(opts);
 
 
+test('TEST # 1:', t => {
+  console.log('Testing catching of thrown errors in executor function:');
+  let entity1 = new Entity().setKind('TestKind');
+  return Promise.resolve()
+    .then(() => {
+      return entity1.fromUUID();
+    })
+    .then(() => {
+      return new Transaction()
+      .keys({
+        sender: entity1.key
+      })
+      .exec((entities) => {
+        throw(new TypeError('THROWN ERROR TEST'));
+      });
+    })
+    .then(() => {
+      t.fail();
+    })
+    .catch((e) => {
+      console.error(e);
+      t.pass();
+    });
+});
+
+/*
 const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 let entity1 = new Entity();
@@ -337,3 +363,4 @@ test('13', t => {
       t.pass();
     });
 });
+*/
