@@ -85,18 +85,28 @@ const DS2 = (opts, debug) => {
           
           // Check for exceptions:
           if (Boolean(error) === true) {
-            log('DS2 :: exception found in executor function.');
+            log('DS2 :: error, exception found in executor function.');
             return Promise.reject(error);
           }
+
+          // Ensure our executor function returned a promise:
           if (Boolean(result.then) !== true || typeof result.then !== 'function') {
-            log('DS2 :: invalid object was returned by executor function.');
-            return Promise.reject('DS2 :: invalid object was returned by executor function.');
+            log('DS2 :: error, expecting promise from executor function.');
+            return Promise.reject('DS2 :: error, expecting promise from executor function.');
           }
+
           return result;
         })
 
         // Proceed if not rejected by developer:
         .then((entities) => {
+
+          // Ensure our executor function passed a valid object:
+          if (Boolean(entities) !== true || typeof entities !== 'object') {
+            log('DS2 :: error, expecting object from executor function promise.');
+            return Promise.reject('DS2 :: error, expecting object from executor function promise.');
+          }
+
           const updateArray =  keyPairs.map((keyPair) => {
             return {
               key: keyPair[1],
@@ -108,6 +118,7 @@ const DS2 = (opts, debug) => {
           // Check for datastore errors::
           return transaction.commit()
             .catch((error) => {
+              log('DS2 :: error, datastore commit failed, rolling back.');
 
               // Rollback the transaction, pass error to our final error handler:
               return transaction.rollback().then(() => Promise.reject(error));

@@ -24,7 +24,8 @@
   * Improved exception handling, now handles resolve, reject and thrown exceptions.
   * Added debug logging capability.
   * Inclusion of entity namespace in hashes.
-  * Added a check that ensures executor function returns valid object.
+  * Added a check that ensures executor function return a promise.
+  * Added a check that ensures the returned promise passes an object argument.
 * 4.x
   * Improved exception handling.
 * 3.x
