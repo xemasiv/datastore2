@@ -22,7 +22,9 @@
 
 * 5.x
   * Improved exception handling, now handles resolve, reject and thrown exceptions.
+  * Added debug logging capability.
   * Inclusion of entity namespace in hashes.
+  * Added a check that ensures executor function returns valid object.
 * 4.x
   * Improved exception handling.
 * 3.x

@@ -88,7 +88,10 @@ const DS2 = (opts, debug) => {
             log('DS2 :: exception found in executor function.');
             return Promise.reject(error);
           }
-
+          if (Boolean(result.then) !== true || typeof result.then !== 'function') {
+            log('DS2 :: invalid object was returned by executor function.');
+            return Promise.reject('DS2 :: invalid object was returned by executor function.');
+          }
           return result;
         })
 
@@ -123,7 +126,7 @@ const DS2 = (opts, debug) => {
          * We release the locks.
          */
         .catch((error) => Dread.release(keySet).then(() => Promise.reject(error)));
-        
+
       return promise;
 
     }
