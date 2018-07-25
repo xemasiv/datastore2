@@ -1,5 +1,5 @@
 // test.json and constructor opts
-process.env["GOOGLE_APPLICATION_CREDENTIALS"] = __dirname.concat("/test.json");
+process.env.GOOGLE_APPLICATION_CREDENTIALS = __dirname.concat("/test.json");
 const opts = {
   projectId: 'pac-1234'
 };

@@ -31,8 +31,7 @@ const Datastore2 = (opts) => {
             { algorithm: 'sha256' }
           );
         });
-        return Promise.resolve()
-          .then(() => Dread.lock(keySet))
+        return Dread.lock(keySet)
           .then(() => transaction.run())
           .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
           .then((results) => {
@@ -40,11 +39,17 @@ const Datastore2 = (opts) => {
             keyPairs.map((keyPair, keyPairIndex) => {
               entities[keyPair[0]] = results[keyPairIndex][0];
             });
-            return executorFn(entities)
-              .catch((reason) => {
-                return Dread.release(keySet)
-                  .then(() => Promise.reject(reason));
-              });
+            let result, error;
+            try {
+              result = executorFn(entities);
+            } catch (e) {
+              error = e;
+            }
+            if (Boolean(error) === true) {
+              return Dread.release(keySet)
+                .then(() => Promise.reject(error));
+            }
+            return Promise.resolve(result);
           })
           .then((entities) => {
             const updateArray =  keyPairs.map((keyPair) => {
@@ -56,16 +61,16 @@ const Datastore2 = (opts) => {
             transaction.save(updateArray);
             return transaction
               .commit()
-              .catch((reason) => {
+              .catch((error) => {
                 return Dread.release(keySet)
-                  .then(() => Promise.reject(reason));
+                  .then(() => Promise.reject(error));
               });
           })
           .then(() => Dread.release(keySet))
-          .catch((reason) => {
-            return Promise.resolve()
-              .then(() => transaction.rollback())
-              .then(() => Promise.reject(reason));
+          .catch((error) => {
+
+            return transaction.rollback()
+              .then(() => Promise.reject(error));
           });
       }
     }
@@ -127,7 +132,7 @@ const Datastore2 = (opts) => {
           });
         });
     }
-  };
+  }
 
   class Entity {
     setValidator (validatorFn) {
