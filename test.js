@@ -6,11 +6,48 @@ const opts = {
 
 import test from 'ava';
 
-const { Key, Entity, Query, Transaction } = require('./index')(opts);
-
+const { Key, Entity, Query, Transaction } = require('./index')(opts, true);
 
 test('TEST # 1:', t => {
-  console.log('Testing catching of thrown errors in executor function:');
+  let entity1 = new Entity().setKind('TestKind');
+  return entity1.fromUUID()
+    .then(() => {
+      return new Transaction()
+        .keys({
+          sender: entity1.key
+        })
+        .exec((entities) => {
+          entities.asd.asd = 123;
+        })
+        .then(() => {})
+        .catch(() => {});
+    })
+    .then(() => {
+      return new Transaction()
+        .keys({
+          sender: entity1.key
+        })
+        .exec((entities) => {
+          return Promise.resolve(entities);
+        })
+        .then(() => {})
+        .catch(() => {});
+    })
+    .then(() => {
+      return new Transaction()
+        .keys({
+          sender: entity1.key
+        })
+        .exec((entities) => {
+          return Promise.reject('REASON');
+        })
+        .then(() => {})
+        .catch(() => {});
+    })
+    .then(() => t.pass());
+});
+/*
+test('TEST # 2:', t => {
   let entity1 = new Entity().setKind('TestKind');
   return Promise.resolve()
     .then(() => {
@@ -22,7 +59,7 @@ test('TEST # 1:', t => {
         sender: entity1.key
       })
       .exec((entities) => {
-        throw(new TypeError('THROWN ERROR TEST'));
+        return Promise.reject('reject reason goes here');
       });
     })
     .then(() => {
@@ -33,7 +70,31 @@ test('TEST # 1:', t => {
       t.pass();
     });
 });
-
+test('TEST # 3:', t => {
+  let entity1 = new Entity().setKind('TestKind');
+  return Promise.resolve()
+    .then(() => {
+      return entity1.fromUUID();
+    })
+    .then(() => {
+      return new Transaction()
+      .keys({
+        sender: entity1.key
+      })
+      .exec((entities) => {
+        // return Promise.resolve('resolve result goes here');
+        return Promise.resolve(entities);
+      });
+    })
+    .then(() => {
+      t.pass();
+    })
+    .catch((e) => {
+      console.error(e);
+      t.fail();
+    });
+});
+*/
 /*
 const RegExUUIDv4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 

@@ -3,8 +3,12 @@ const uuid        = require('uuid-random');
 const hasha       = require('hasha');
 const circular    = require('circular-json');
 const Dreadlock   = require('dreadlocks2');
-const Datastore2 = (opts) => {
+
+const DS2 = (opts, debug) => {
+
   const Datastore = new GCDatastore(opts);
+
+  const log = Boolean(debug) === true ? console.log : () => {};
 
   const Key = (kind, keyName) => {
     keyName = String(keyName);
@@ -12,6 +16,7 @@ const Datastore2 = (opts) => {
   };
 
   const Dread = new Dreadlock();
+
   class Transaction {
     constructor () {
       this.transaction = Datastore.transaction();
@@ -22,57 +27,105 @@ const Datastore2 = (opts) => {
     }
     exec (executorFn) {
       const { transaction, keyPairs } = this;
-      if (Boolean(keyPairs) === false) {
-        return Promise.reject("Transaction missing keys(), can't proceed.");
-      } else {
-        const keySet = keyPairs.map((keyPair) => {
-          return hasha(
-            ''.concat(keyPair[1].kind, keyPair[1].name),
-            { algorithm: 'sha256' }
-          );
-        });
-        return Dread.lock(keySet)
-          .then(() => transaction.run())
-          .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
-          .then((results) => {
-            let entities = {};
-            keyPairs.map((keyPair, keyPairIndex) => {
-              entities[keyPair[0]] = results[keyPairIndex][0];
-            });
-            let result, error;
-            try {
-              result = executorFn(entities);
-            } catch (e) {
-              error = e;
-            }
-            if (Boolean(error) === true) {
-              return Dread.release(keySet)
-                .then(() => Promise.reject(error));
-            }
-            return Promise.resolve(result);
-          })
-          .then((entities) => {
-            const updateArray =  keyPairs.map((keyPair) => {
-              return {
-                key: keyPair[1],
-                data: entities[keyPair[0]]
-              };
-            });
-            transaction.save(updateArray);
-            return transaction
-              .commit()
-              .catch((error) => {
-                return Dread.release(keySet)
-                  .then(() => Promise.reject(error));
-              });
-          })
-          .then(() => Dread.release(keySet))
-          .catch((error) => {
+      let promise;
 
-            return transaction.rollback()
-              .then(() => Promise.reject(error));
-          });
+      if (Boolean(keyPairs) === false) {
+        promise = Promise.reject('DS2 :: transaction missing keys, cannot proceed.');
+        return promise;
       }
+
+      /**
+       * 
+       * We hash using the following unique data:
+       * - Entity's `namespace`
+       * - Entity's `kind`
+       * - Entity's `name` or `id`
+       * 
+       */
+      const keySet = keyPairs.map((keyPair) => {
+        return hasha(
+          ''.concat(
+            String(keyPair.namespace),
+            String(keyPair[1].kind),
+            String(keyPair[1].name || keyPair[1].id)
+          ),
+          { algorithm: 'sha256' }
+        );
+      });
+
+      log(keySet);
+
+      promise = Dread.lock(keySet)
+
+        // Initialize transaction:
+        .then(() => transaction.run())
+
+        // Gather keys for transaction:
+        .then(() => Promise.all(keyPairs.map((keyPair) => transaction.get(keyPair[1]))))
+
+        // Pass what we got to our executor function:
+        .then((results) => {
+
+          let entities = {};
+          keyPairs.map((keyPair, keyPairIndex) => {
+            entities[keyPair[0]] = results[keyPairIndex][0];
+          });
+
+          let result;
+          let error;
+          try {
+            result = executorFn(entities);
+          } catch (e) {
+            error = ''.concat(e.name, e.message);
+          }
+
+          log('DS2 :: typeof result:', typeof result);
+          log('DS2 :: typeof error:', typeof error);
+          log('DS2 :: ', { result, error});
+          
+          // Check for exceptions:
+          if (Boolean(error) === true) {
+            log('DS2 :: exception found in executor function.');
+            return Promise.reject(error);
+          }
+
+          return result;
+        })
+
+        // Proceed if not rejected by developer:
+        .then((entities) => {
+          const updateArray =  keyPairs.map((keyPair) => {
+            return {
+              key: keyPair[1],
+              data: entities[keyPair[0]]
+            };
+          });
+          transaction.save(updateArray);
+
+          // Check for datastore errors::
+          return transaction.commit()
+            .catch((error) => {
+
+              // Rollback the transaction, pass error to our final error handler:
+              return transaction.rollback().then(() => Promise.reject(error));
+            });
+        })
+        
+        // Release locks if transaction is successful:
+        .then(() => Dread.release(keySet))
+
+        /**
+         * Final error handler:
+         * - If rejected by developer
+         * - If exception was found
+         * - If datastore error was found
+         * 
+         * We release the locks.
+         */
+        .catch((error) => Dread.release(keySet).then(() => Promise.reject(error)));
+        
+      return promise;
+
     }
   }
 
@@ -270,4 +323,4 @@ const Datastore2 = (opts) => {
     Query
   };
 };
-module.exports = Datastore2;
+module.exports = DS2;

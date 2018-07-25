@@ -20,6 +20,9 @@
 
 ### Changelog
 
+* 5.x
+  * Improved exception handling, now handles resolve, reject and thrown exceptions.
+  * Inclusion of entity namespace in hashes.
 * 4.x
   * Improved exception handling.
 * 3.x
