@@ -21,6 +21,7 @@
 ### Changelog
 
 * 5.x
+  * Added TypeError on wrongly parameterized Key initialization, only accepts typeof 'string' or 'number'
   * Improved exception handling, now handles resolve, reject and thrown exceptions.
   * Added debug logging capability.
   * Inclusion of entity namespace in hashes.

@@ -11,8 +11,11 @@ const DS2 = (opts, debug) => {
   const log = Boolean(debug) === true ? console.log : () => {};
 
   const Key = (kind, keyName) => {
-    keyName = String(keyName);
-    return Datastore.key([kind, keyName]);
+    if (typeof keyName === 'string' || typeof keyName === 'number') {
+      keyName = String(keyName);
+      return Datastore.key([kind, keyName]);
+    }
+    throw(new TypeError('EXPECTING string OR number AS KEY name OR id.'));
   };
 
   const Dread = new Dreadlock();
